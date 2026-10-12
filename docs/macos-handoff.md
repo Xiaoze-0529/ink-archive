@@ -39,7 +39,7 @@
 
 ## 测试边界
 
-Windows 上验证了工程文件引用、XML / plist、文件归档与 Git 完整性。代码提交 `3c5c806` 已经通过 GitHub macOS 运行环境中的 10 项 Swift 核心测试和 iPhone 模拟器 App 编译；[验证运行记录](https://github.com/Xiaoze-0529/ink-archive/actions/runs/38221224074)。相机、权限与界面操作尚未进行真机运行验收。当前不是可发布至 App Store 的版本。
+Windows 上验证了工程文件引用、XML / plist、文件归档与 Git 完整性。本轮代码提交 `9caa887` 已通过 GitHub macOS 运行环境中的 19 项 Swift 测试和 iPhone 模拟器 App 编译；[验证运行记录](https://github.com/Xiaoze-0529/ink-archive/actions/runs/38230711246)。相机、手写准确率、权限与界面操作尚未进行真机运行验收。当前不是可发布至 App Store 的版本。
 
 ## 官方采集文档
 

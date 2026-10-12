@@ -35,7 +35,7 @@ xcodebuild -project InkArchive.xcodeproj -scheme InkArchive \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-前一阶段的代码提交 `3c5c806` 通过了 10 项核心测试和 iPhone 模拟器编译。[历史验证记录](https://github.com/Xiaoze-0529/ink-archive/actions/runs/38221224074)。本轮增加校正、OCR、标签检索与实际 Apple 图像 API 的合成夹具测试；请以 [最新 CI 结果](https://github.com/Xiaoze-0529/ink-archive/actions) 为本轮验证依据。相机与手写效果仍需真机运行验收。
+本轮代码提交 `9caa887` 通过了 19 项测试（含实际 Apple 图像 API 的合成夹具）与 iPhone 模拟器编译。[本轮验证记录](https://github.com/Xiaoze-0529/ink-archive/actions/runs/38230711246)。相机、四角拖拽与真实手写效果仍需真机运行验收。
 
 ## 文件布局
 
