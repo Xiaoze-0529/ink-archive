@@ -1,0 +1,21 @@
+name: iOS validation
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Project wiring
+        run: python3 scripts/validate_project.py
+      - name: Core tests
+        working-directory: InkArchiveCore
+        run: swift test
+      - name: Build iPhone simulator app
+        run: >-
+          xcodebuild -project InkArchive.xcodeproj -scheme InkArchive
+          -configuration Debug -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath build CODE_SIGNING_ALLOWED=NO build

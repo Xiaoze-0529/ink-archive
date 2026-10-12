@@ -1,0 +1,112 @@
+<div id="product-structure" aria-label="墨迹档案产品结构图">
+  <style>
+    #product-structure {
+      color: var(--foreground);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    #product-structure * { box-sizing: border-box; }
+    #product-structure .heading { margin: 0 0 16px; font-size: 1.25rem; font-weight: 500; }
+    #product-structure .graph { display: grid; gap: 14px; }
+    #product-structure .root-row { display: flex; justify-content: center; }
+    #product-structure .root, #product-structure .node {
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--card) 92%, transparent);
+      color: var(--card-foreground);
+      padding: 12px 14px;
+      text-align: left;
+      min-width: 176px;
+    }
+    #product-structure .root { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+    #product-structure .node { width: 100%; }
+    #product-structure .node strong, #product-structure .root strong { display: block; font-weight: 500; }
+    #product-structure .node span, #product-structure .root span { display: block; margin-top: 4px; color: var(--muted-foreground); font-size: .82rem; }
+    #product-structure .root span { color: color-mix(in srgb, var(--primary-foreground) 74%, transparent); }
+    #product-structure .connector { width: 1px; height: 18px; background: var(--border); margin: 0 auto; }
+    #product-structure .branch { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; padding-top: 18px; }
+    #product-structure .branch::before { content: ""; position: absolute; height: 1px; background: var(--border); left: 16.5%; right: 16.5%; top: 0; }
+    #product-structure .column { position: relative; display: grid; gap: 10px; }
+    #product-structure .column::before { content: ""; position: absolute; top: -18px; left: 50%; width: 1px; height: 18px; background: var(--border); }
+    #product-structure .column > h2 { margin: 0; font-size: 1rem; font-weight: 500; }
+    #product-structure .subgroup { display: grid; gap: 8px; padding-left: 12px; border-left: 2px solid var(--border); }
+    #product-structure button.node { font: inherit; }
+    #product-structure button.node:hover, #product-structure button.node:focus-visible { border-color: var(--ring); outline: 2px solid color-mix(in srgb, var(--ring) 35%, transparent); outline-offset: 2px; }
+    #product-structure button.node.is-selected { background: color-mix(in srgb, var(--accent) 76%, var(--card)); border-color: var(--ring); }
+    #product-structure .detail { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+    #product-structure .detail-title { margin: 0 0 4px; font-weight: 500; }
+    #product-structure .detail-text { margin: 0; color: var(--muted-foreground); }
+    #product-structure .mvp { margin-top: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted-foreground); }
+    #product-structure .mvp b { color: var(--foreground); font-weight: 500; }
+    #product-structure .mvp i { font-style: normal; padding: 3px 8px; background: color-mix(in srgb, var(--accent) 70%, transparent); color: var(--accent-foreground); }
+    @media (max-width: 620px) {
+      #product-structure .branch { grid-template-columns: 1fr; padding-top: 0; }
+      #product-structure .branch::before, #product-structure .column::before { display: none; }
+      #product-structure .column { border-top: 1px solid var(--border); padding-top: 12px; }
+    }
+  </style>
+  <h1 class="heading">墨迹档案 · 产品结构</h1>
+  <div class="graph">
+    <div class="root-row">
+      <button class="root cursor-interaction" type="button" data-key="book" aria-pressed="true"><strong>手账本 Book</strong><span>封面、标题、时间范围、排序</span></button>
+    </div>
+    <div class="connector" aria-hidden="true"></div>
+    <div class="branch">
+      <section class="column" aria-labelledby="page-title">
+        <h2 id="page-title">阅读结构</h2>
+        <button class="node cursor-interaction" type="button" data-key="page"><strong>页面 Page</strong><span>页序、版式、原始扫描关联</span></button>
+        <div class="subgroup">
+          <button class="node cursor-interaction" type="button" data-key="layer"><strong>物件层 Layer</strong><span>位置、裁切蒙版、层级、交互类型</span></button>
+          <button class="node cursor-interaction" type="button" data-key="relations"><strong>结构关联</strong><span>固定边、背面、下层、子页面</span></button>
+        </div>
+      </section>
+      <section class="column" aria-labelledby="asset-title">
+        <h2 id="asset-title">档案资产</h2>
+        <button class="node cursor-interaction" type="button" data-key="original"><strong>原始扫描件</strong><span>不可替换、校验值、云端备份</span></button>
+        <div class="subgroup">
+          <button class="node cursor-interaction" type="button" data-key="derivative"><strong>衍生版本</strong><span>校正图、墨迹增强图、缩略图</span></button>
+          <button class="node cursor-interaction" type="button" data-key="capture"><strong>补扫素材</strong><span>背面、下层、展开后的完整页面</span></button>
+        </div>
+      </section>
+      <section class="column" aria-labelledby="index-title">
+        <h2 id="index-title">检索与保护</h2>
+        <button class="node cursor-interaction" type="button" data-key="metadata"><strong>元数据</strong><span>日期、地点、标签、描述</span></button>
+        <div class="subgroup">
+          <button class="node cursor-interaction" type="button" data-key="ocr"><strong>手写索引</strong><span>OCR 文本与搜索定位，不改写原图</span></button>
+          <button class="node cursor-interaction" type="button" data-key="history"><strong>版本记录</strong><span>标注修改可回退，原件永久保留</span></button>
+        </div>
+      </section>
+    </div>
+  </div>
+  <div class="detail" aria-live="polite">
+    <p class="detail-title" id="detail-title">手账本 Book</p>
+    <p class="detail-text" id="detail-text">一个手账本聚合页面、扫描资产与检索资料；它只管理组织关系，不保存图片副本。</p>
+  </div>
+  <div class="mvp" aria-label="首版范围"><b>首版：</b><i>页面</i><i>物件层</i><i>原始扫描件</i><i>校正图</i><i>基础检索</i></div>
+  <script>
+    (() => {
+      const root = document.getElementById('product-structure');
+      const copy = {
+        book: ['手账本 Book', '一个手账本聚合页面、扫描资产与检索资料；它只管理组织关系，不保存图片副本。'],
+        page: ['页面 Page', '阅读器中的一页。它指定展示顺序、页面类型，并引用一份或多份原始扫描件。'],
+        layer: ['物件层 Layer', '每一张票根、照片、便签或信封都是一个独立物件层，保存位置、裁切与显示叠放关系。'],
+        relations: ['结构关联', '只描述真实纸本关系：可翻起的固定边、物件背面、露出的下层内容，以及关联的夹页或折页。'],
+        original: ['原始扫描件', '档案可信度的根基。原图不可覆盖，保存拍摄时间、校验值与至少一份云端副本。'],
+        derivative: ['衍生版本', '透视校正、去阴影、墨迹增强与缩略图都是可重新生成的衍生版本，永远能回到原件。'],
+        capture: ['补扫素材', '需要掀起、抽出或展开的内容必须另行扫描；未补扫时，在阅读器明确显示“待补扫”。'],
+        metadata: ['元数据', '由用户补充或自动建议的日期、地点、人物与标签，帮助日后按回忆检索。'],
+        ocr: ['手写索引', 'OCR 保存为可搜索文本与页内定位；它是索引，不是对用户手写内容的替代。'],
+        history: ['版本记录', '记录层级、裁切和交互标注的修改，可回退；原始扫描资产不参与删除或覆盖。']
+      };
+      root.querySelectorAll('button[data-key]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const [title, text] = copy[button.dataset.key];
+          root.querySelector('#detail-title').textContent = title;
+          root.querySelector('#detail-text').textContent = text;
+          root.querySelectorAll('button[data-key]').forEach((item) => {
+            item.classList.toggle('is-selected', item === button && !item.classList.contains('root'));
+            item.setAttribute('aria-pressed', String(item === button));
+          });
+        });
+      });
+    })();
+  </script>
+</div>

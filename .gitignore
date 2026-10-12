@@ -1,0 +1,15 @@
+.DS_Store
+.build/
+.swiftpm/
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+*.xcresult
+.env
+.env.*
+*.p12
+*.mobileprovision
+*.ipa
+*.dSYM/
+__pycache__/
