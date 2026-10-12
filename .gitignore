@@ -13,3 +13,5 @@ xcuserdata/
 *.ipa
 *.dSYM/
 __pycache__/
+Samples/
+Reports/

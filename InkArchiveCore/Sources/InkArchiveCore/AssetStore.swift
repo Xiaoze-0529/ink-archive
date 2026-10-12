@@ -58,4 +58,22 @@ public struct AssetStore: Sendable {
     public func url(for asset: AssetRecord) -> URL {
         rootDirectory.appendingPathComponent(asset.relativePath)
     }
+
+    public func saveCorrection(_ document: CorrectedDocument, source: AssetRecord) throws -> AssetRecord {
+        guard source.kind == .original, !document.data.isEmpty, document.recipe.quad.isValid,
+              document.pixelWidth > 0, document.pixelHeight > 0 else {
+            throw ArchiveError.invalidAsset("校正必须关联有效原件与四角参数。")
+        }
+        let id = UUID()
+        let relativePath = "Assets/derived/\(source.id.uuidString)/\(id.uuidString).jpg"
+        let file = rootDirectory.appendingPathComponent(relativePath)
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try document.data.write(to: file, options: .atomic)
+        return AssetRecord(
+            id: id, contentHash: Self.contentHash(for: document.data), kind: .corrected, role: source.role,
+            sourceAssetID: source.id, relativePath: relativePath, byteCount: document.data.count,
+            captureAt: source.captureAt, pixelWidth: document.pixelWidth, pixelHeight: document.pixelHeight,
+            correctionRecipe: document.recipe
+        )
+    }
 }

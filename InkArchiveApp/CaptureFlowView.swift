@@ -2,6 +2,7 @@ import PhotosUI
 import SwiftUI
 import ImageIO
 import UniformTypeIdentifiers
+import InkArchiveCore
 
 struct CaptureFlowView: View {
     @EnvironmentObject private var model: ArchiveAppModel
@@ -14,6 +15,10 @@ struct CaptureFlowView: View {
     @State private var saving = false
     @State private var importing = false
     @State private var error: String?
+    @State private var correction: CorrectedDocument?
+    @State private var correctionInput: CorrectionInput?
+    @State private var tags = ""
+    @State private var receivedCameraPhoto = false
 
     var body: some View {
         NavigationStack {
@@ -22,21 +27,32 @@ struct CaptureFlowView: View {
                     Image(uiImage: preview).resizable().scaledToFit()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .accessibilityLabel("待保存的手账页")
-                    Text("确认整页清晰、没有遮挡。保存后将保留收到的原始图片文件。")
+                    Text(correction == nil ? "原件将完整保存；可调整四角生成独立校正图。" : "已生成校正图，保存时会同时保留原件。")
                         .font(.subheadline).foregroundStyle(.secondary)
+                    Button("调整四角", systemImage: "crop.rotate") {
+                        if let capture { correctionInput = CorrectionInput(data: capture.data, initialQuad: correction?.recipe.quad) }
+                    }.disabled(saving)
+                    if correction != nil {
+                        Button("改用原件") {
+                            correction = nil
+                            if let capture { preview = makePreview(capture.data) }
+                        }.disabled(saving)
+                    }
+                    TextField("人工标签，用逗号分隔", text: $tags).textFieldStyle(.roundedBorder).disabled(saving)
                     Button {
                         guard let capture else { return }
                         saving = true
                         Task {
                             defer { saving = false }
                             do {
-                                try await model.saveCapture(capture, in: journalID)
+                                try await model.saveCapture(capture, correction: correction,
+                                                            tags: ArchiveAppModel.parseTags(tags), in: journalID)
                                 dismiss()
                             } catch { self.error = "保存失败，图片仍在当前预览中：\(error.localizedDescription)" }
                         }
                     } label: {
                         if saving { ProgressView().tint(.white) }
-                        else { Label("保存原件", systemImage: "tray.and.arrow.down") }
+                        else { Label("保存并识别中文", systemImage: "tray.and.arrow.down") }
                     }.buttonStyle(.borderedProminent).disabled(saving || importing)
                 } else {
                     ContentUnavailableView {
@@ -52,7 +68,7 @@ struct CaptureFlowView: View {
                         Label("从相册选择", systemImage: "photo")
                     }
                 }.disabled(saving || importing)
-                Text("此版本为整页采集；裁边校正、结构标注与云端上传将在后续接入。")
+                Text("识别在本机完成；字迹难以识别时可用人工标签检索。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             .padding(24)
@@ -65,11 +81,20 @@ struct CaptureFlowView: View {
                 }
             }
             .interactiveDismissDisabled(saving)
-            .fullScreenCover(isPresented: $showingCamera) {
+            .fullScreenCover(isPresented: $showingCamera, onDismiss: {
+                if receivedCameraPhoto, let capture { correctionInput = CorrectionInput(data: capture.data, initialQuad: nil) }
+                receivedCameraPhoto = false
+            }) {
                 CameraView { data in
-                    do { try accept(data) }
+                    do { try accept(data); receivedCameraPhoto = true }
                     catch { self.error = error.localizedDescription }
                     showingCamera = false
+                }
+            }
+            .sheet(item: $correctionInput) { input in
+                DocumentCorrectionView(input: input) { result in
+                    correction = result
+                    preview = makePreview(result.data)
                 }
             }
             .onChange(of: selectedPhoto) { _, item in
@@ -80,6 +105,7 @@ struct CaptureFlowView: View {
                     do {
                         guard let data = try await item.loadTransferable(type: Data.self) else { throw AppFailure.invalidImage }
                         try accept(data)
+                        correctionInput = CorrectionInput(data: data, initialQuad: nil)
                     } catch {
                         self.error = "读取失败。如果图片仅存在于 iCloud 相册，请先下载到本机。\(error.localizedDescription)"
                     }
@@ -102,6 +128,17 @@ struct CaptureFlowView: View {
                 kCGImageSourceThumbnailMaxPixelSize: 1600
               ] as CFDictionary) else { throw AppFailure.invalidImage }
         capture = CapturedPage(data: data, fileExtension: ext)
+        correction = nil
         preview = UIImage(cgImage: thumbnail)
+    }
+
+    private func makePreview(_ data: Data) -> UIImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: 1600
+              ] as CFDictionary) else { return nil }
+        return UIImage(cgImage: image)
     }
 }

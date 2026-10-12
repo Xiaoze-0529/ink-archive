@@ -4,11 +4,13 @@ iOS 手写手账归档应用。扫描原件保存在本机，页面阅读离线�
 
 ## 当前可用流程
 
-新建手账 → 真机拍摄 / 相册导入 → 原件预览 → 确认保存 → 页面列表 → 左右翻阅 → 退出并重启后恢复。
+新建手账 → 真机拍摄 / 相册导入 → 自动检测边缘 / 手动调整四角 → 原件与独立校正图保存 → 本机简体中文 OCR → 页面列表 / 文字与标签搜索 → 原件、校正图与识别框阅读。
 
 相机采集使用 AVFoundation 的 `fileDataRepresentation()`，保留接收到的 JPEG 文件及其元数据，不重新编码为预览图。相册导入保存 PhotosPicker 返回的文件数据；仅在 iCloud 相册中的图片可能需要先联网下载。
 
-工程已配置 iPhone / iOS 17+，本地 Swift Package 无第三方依赖。尚未接入的功能：透视裁边与增强、结构标注界面、物件动画、OCR 搜索、iCloud 真实上传与恢复。备份队列已落盘，界面如实显示“仅本地”。
+工程已配置 iPhone / iOS 17+，本地 Swift Package 无第三方依赖。自动边缘只是建议选区，用户可拖动四角确认、恢复整页或直接保存原件。每次校正追加独立资产，保存原件引用、四角参数与尺寸；阅读器可随时切回原件。尚未接入的功能：去阴影与墨迹增强、结构标注界面、物件动画、iCloud 真实上传与恢复。备份队列已落盘，界面如实显示“仅本地”。
+
+OCR 首版使用 Vision 的 `zh-Hans` 配置，保存每行文字、识别框、置信度和实际图片版本；无文字或识别失败时保留人工标签检索。真实手写效果需要用你的页面验证，仓库没有用户的手写样本。阅读器的“文字与标签”可人工抄录正确文本来评价当前样本，也可用 [macOS 批量工具](docs/capture-ocr-testing.md) 生成本地验证报告。
 
 ## 在 macOS 上继续
 
@@ -33,7 +35,7 @@ xcodebuild -project InkArchive.xcodeproj -scheme InkArchive \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-GitHub Actions 已在 macOS 上验证代码提交 `3c5c806`：10 项核心测试通过，iPhone 模拟器编译成功。[查看验证记录](https://github.com/Xiaoze-0529/ink-archive/actions/runs/38221224074)。相机和权限流程仍需真机运行验收。
+前一阶段的代码提交 `3c5c806` 通过了 10 项核心测试和 iPhone 模拟器编译。[历史验证记录](https://github.com/Xiaoze-0529/ink-archive/actions/runs/38221224074)。本轮增加校正、OCR、标签检索与实际 Apple 图像 API 的合成夹具测试；请以 [最新 CI 结果](https://github.com/Xiaoze-0529/ink-archive/actions) 为本轮验证依据。相机与手写效果仍需真机运行验收。
 
 ## 文件布局
 

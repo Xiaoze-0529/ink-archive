@@ -141,7 +141,8 @@ public actor ArchiveRepository {
 
     /// Commits a camera capture and its page in one metadata write.
     @discardableResult
-    public func importPage(data: Data, fileExtension: String, into journalID: UUID, at date: Date = .now) throws -> PageRecord {
+    public func importPage(data: Data, fileExtension: String, into journalID: UUID,
+                           correction: CorrectedDocument? = nil, tags: [String] = [], at date: Date = .now) throws -> PageRecord {
         guard var journal = snapshot.journals[journalID], journal.deletedAt == nil else {
             throw ArchiveError.journalNotFound
         }
@@ -149,9 +150,16 @@ public actor ArchiveRepository {
         let asset = snapshot.assets.values.first {
             $0.contentHash == imported.contentHash && $0.role == .pageFront && $0.kind == .original && $0.deletedAt == nil
         } ?? imported
-        let page = PageRecord(journalID: journalID, baseAssetID: asset.id, kind: .normal, createdAt: date)
+        var page = PageRecord(journalID: journalID, baseAssetID: asset.id, kind: .normal, createdAt: date)
+        page.tags = normalizedTags(tags)
         var next = snapshot
         next.assets[asset.id] = asset
+        if let correction {
+            let corrected = try assetStore.saveCorrection(correction, source: asset)
+            next.assets[corrected.id] = corrected
+            page.correctedAssetIDs = [corrected.id]
+            page.selectedCorrectedAssetID = corrected.id
+        }
         next.pages[page.id] = page
         journal.pageOrder.append(page.id)
         journal.revision += 1
@@ -171,6 +179,103 @@ public actor ArchiveRepository {
         snapshot.assets.values.filter { $0.kind == .original && $0.backupState != .backedUp && $0.deletedAt == nil }
     }
 
+    public func assetsAwaitingBackup() -> [AssetRecord] {
+        snapshot.assets.values.filter { $0.backupState != .backedUp && $0.deletedAt == nil }
+    }
+
+    @discardableResult
+    public func saveCorrection(_ document: CorrectedDocument, for pageID: UUID, at date: Date = .now) throws -> PageRecord {
+        guard var page = snapshot.pages[pageID], page.deletedAt == nil else { throw ArchiveError.pageNotFound }
+        guard let original = snapshot.assets[page.baseAssetID], original.deletedAt == nil else { throw ArchiveError.assetNotFound }
+        let corrected = try assetStore.saveCorrection(document, source: original)
+        var next = snapshot
+        next.assets[corrected.id] = corrected
+        page.correctedAssetIDs = (page.correctedAssetIDs ?? []) + [corrected.id]
+        page.selectedCorrectedAssetID = corrected.id
+        page.ocrRun = nil
+        page.revision += 1
+        page.updatedAt = date
+        next.pages[pageID] = page
+        try commit(next)
+        return page
+    }
+
+    public func saveTags(_ tags: [String], for pageID: UUID) throws {
+        guard var page = snapshot.pages[pageID], page.deletedAt == nil else { throw ArchiveError.pageNotFound }
+        page.tags = normalizedTags(tags)
+        page.revision += 1
+        page.updatedAt = .now
+        var next = snapshot
+        next.pages[pageID] = page
+        try commit(next)
+    }
+
+    public func saveOCR(result: OCRResult, for pageID: UUID, sourceAssetID: UUID) throws {
+        guard var page = snapshot.pages[pageID], page.deletedAt == nil else { throw ArchiveError.pageNotFound }
+        guard sourceAssetID == (page.selectedCorrectedAssetID ?? page.baseAssetID) else {
+            throw ArchiveError.invalidAsset("页面校正版本已经改变，请重新识别。")
+        }
+        var next = snapshot
+        next.searchRecords = next.searchRecords.filter {
+            !($0.value.ownerType == .page && $0.value.ownerID == pageID && $0.value.sourceAssetID == sourceAssetID)
+        }
+        for line in result.lines {
+            let record = SearchRecord(
+                ownerType: .page, ownerID: pageID, text: line.text, language: result.language,
+                boxes: [line.box], sourceAssetID: sourceAssetID, engineRevision: result.engineRevision, confidence: line.confidence
+            )
+            next.searchRecords[record.id] = record
+        }
+        page.ocrRun = OCRRunRecord(state: result.lines.isEmpty ? .noText : .recognized, sourceAssetID: sourceAssetID,
+                                   engineRevision: result.engineRevision, elapsedMilliseconds: result.elapsedMilliseconds)
+        next.pages[pageID] = page
+        try commit(next)
+    }
+
+    public func saveOCRFailure(state: OCRState, message: String, for pageID: UUID, sourceAssetID: UUID) throws {
+        guard var page = snapshot.pages[pageID], page.deletedAt == nil else { throw ArchiveError.pageNotFound }
+        guard sourceAssetID == (page.selectedCorrectedAssetID ?? page.baseAssetID) else {
+            throw ArchiveError.invalidAsset("识别失败消息对应旧的图片版本。")
+        }
+        // Existing successful records remain available after a failed re-run.
+        page.ocrRun = OCRRunRecord(state: state, sourceAssetID: sourceAssetID, message: message)
+        var next = snapshot
+        next.pages[pageID] = page
+        try commit(next)
+    }
+
+    public func searchRecords(for pageID: UUID, sourceAssetID: UUID? = nil) -> [SearchRecord] {
+        guard let page = snapshot.pages[pageID], page.deletedAt == nil else { return [] }
+        let source = sourceAssetID ?? page.selectedCorrectedAssetID ?? page.baseAssetID
+        return snapshot.searchRecords.values.filter {
+            $0.ownerType == .page && $0.ownerID == pageID && $0.sourceAssetID == source
+        }.sorted {
+            let left = $0.boxes.first ?? .init(x: 0, y: 0, width: 0, height: 0)
+            let right = $1.boxes.first ?? .init(x: 0, y: 0, width: 0, height: 0)
+            let leftRow = Int(left.y * 100), rightRow = Int(right.y * 100)
+            if leftRow != rightRow { return leftRow < rightRow }
+            return left.x < right.x
+        }
+    }
+
+    public func searchPages(query: String, in journalID: UUID) -> [PageRecord] {
+        let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pages = pages(in: journalID)
+        guard !query.isEmpty else { return pages }
+        return pages.filter { page in
+            (page.tags ?? []).contains { $0.localizedCaseInsensitiveContains(query) } ||
+            searchRecords(for: page.id).map(\.text).joined(separator: "\n").localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    public func saveOCRReference(_ text: String, for pageID: UUID) throws {
+        guard var page = snapshot.pages[pageID], page.deletedAt == nil else { throw ArchiveError.pageNotFound }
+        page.ocrReferenceText = text
+        var next = snapshot
+        next.pages[pageID] = page
+        try commit(next)
+    }
+
     public func assetURL(id: UUID) throws -> URL {
         guard let asset = snapshot.assets[id], asset.deletedAt == nil else { throw ArchiveError.assetNotFound }
         return assetStore.url(for: asset)
@@ -182,5 +287,11 @@ public actor ArchiveRepository {
         let data = try encoder.encode(next)
         try data.write(to: databaseURL, options: .atomic)
         snapshot = next
+    }
+
+    private func normalizedTags(_ tags: [String]) -> [String] {
+        var seen = Set<String>()
+        return tags.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && seen.insert($0).inserted }
     }
 }
