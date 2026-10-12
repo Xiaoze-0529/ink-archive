@@ -19,13 +19,21 @@ iOS 手写手账归档应用。扫描原件保存在本机，页面阅读离线�
 5. 打开 `InkArchiveCore/Package.swift` 的独立 Xcode 窗口运行包测试，或在终端执行下列命令。
 
 ```sh
+git clone https://github.com/Xiaoze-0529/ink-archive.git
+cd ink-archive
+open InkArchive.xcodeproj
+```
+
+验证命令：
+
+```sh
 swift test --package-path InkArchiveCore
 xcodebuild -project InkArchive.xcodeproj -scheme InkArchive \
   -configuration Debug -destination 'generic/platform=iOS Simulator' \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-GitHub Actions 在 macOS 上运行同样的包测试与模拟器编译。推送后需查看实际运行结果；当前 Windows 开发环境无法执行 Xcode 编译、Swift 测试或真机验收。
+GitHub Actions 已在 macOS 上验证代码提交 `3c5c806`：10 项核心测试通过，iPhone 模拟器编译成功。[查看验证记录](https://github.com/Xiaoze-0529/ink-archive/actions/runs/38221224074)。相机和权限流程仍需真机运行验收。
 
 ## 文件布局
 

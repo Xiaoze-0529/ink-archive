@@ -37,7 +37,7 @@
 
 ## 测试边界
 
-Windows 上只能验证工程文件引用、XML / plist、文件归档与 Git 完整性。本次 Swift 代码尚未经过编译与运行；GitHub Actions 和 macOS 首次运行的结果才是编译/测试依据。当前不是可发布至 App Store 的版本。
+Windows 上验证了工程文件引用、XML / plist、文件归档与 Git 完整性。代码提交 `3c5c806` 已经通过 GitHub macOS 运行环境中的 10 项 Swift 核心测试和 iPhone 模拟器 App 编译；[验证运行记录](https://github.com/Xiaoze-0529/ink-archive/actions/runs/38221224074)。相机、权限与界面操作尚未进行真机运行验收。当前不是可发布至 App Store 的版本。
 
 ## 官方采集文档
 
