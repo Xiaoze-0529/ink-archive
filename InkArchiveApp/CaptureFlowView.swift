@@ -35,7 +35,7 @@ struct CaptureFlowView: View {
                     if correction != nil {
                         Button("改用原件") {
                             correction = nil
-                            if let capture { preview = makePreview(capture.data) }
+                            if let capture { self.preview = makePreview(capture.data) }
                         }.disabled(saving)
                     }
                     TextField("人工标签，用逗号分隔", text: $tags).textFieldStyle(.roundedBorder).disabled(saving)
